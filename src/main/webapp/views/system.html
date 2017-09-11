@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>System</title>
+    <link href = "../bootstrap-3.3.7-dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <table class = "table table-striped" id = "table">
+        <thead>
+            <th>#</th>
+            <th>code</th>
+            <th>description</th>
+            <th>status</th>
+            <th>operator</th>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div class="modal fade" tabindex="-1" role="dialog" id = "myModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Modal title</h4>
+                </div>
+                <div class="modal-body">
+                    <form class="form-horizontal">
+                        <div class="form-group">
+                            <label for="id" class="col-sm-3 control-label">ID:</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="id" placeholder="ID" readonly value="-1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="code" class="col-sm-3 control-label">Code:</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="code" placeholder="Code">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="description" class="col-sm-3 control-label">Description:</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="description" placeholder="Description">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="status" class="col-sm-3 control-label">Status:</label>
+                            <div class="col-sm-9">
+                                <input type="radio" name="status" id="status0" value="0">
+                                禁用
+                                <input type="radio" name="status" id="status1" value="1">
+                                正常
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="addOrUpdate()">Submit</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+</body>
+<script src = "../jquery/jquery-3.2.1.min.js"></script>
+<script src = "../bootstrap-3.3.7-dist/js/bootstrap.min.js"></script>
+<script>
+    var systems = null;
+    $(document).ready(function(){
+        findAll();
+    });
+    function findAll(){
+        $.ajax({
+            url: '/api/systems',
+            dataType: 'json',
+            method: 'GET',
+            success: function(res){
+                console.log('success -- ', res);
+                systems = res.data;
+                if(res.data.length == 0){
+                    $('tbody').children().remove();
+                    $('tbody').append('<tr><td>-</td><td>-</td><td>-</td><td>-</td><td>' +
+                        '<div class="btn-group" role="group" aria-label="...">' +
+                            '<button type="button" class="btn btn-default" onclick="show(-1)">添加</button>' +
+                            '<button type="button" class="btn btn-default" onclick="deleted(-1)">删除</button>' +
+                            '<button type="button" class="btn btn-default" onclick="show(-1)">修改</button>' +
+                        '</div>' +
+                        '</td></tr>');
+                }else {
+                    $('tbody').children().remove();
+                    for(var i = 0;i < res.data.length;++i) {
+                        $('tbody').append('<tr><td>' + (i + 1) + '</td><td>' + res.data[i].code + '</td><td>' + res.data[i].description + '</td><td>' + res.data[i].status + '</td><td>' +
+                            '<div class="btn-group" role="group" aria-label="...">' +
+                            '<button type="button" class="btn btn-default" onclick="show(-1)">添加</button>' +
+                            '<button type="button" class="btn btn-default" onclick="deleted(' + res.data[i].id + ')">删除</button>' +
+                            '<button type="button" class="btn btn-default" onclick="show(' + i + ')">修改</button>' +
+                            '</div>' +
+                            '</td></tr>');
+                    }
+                }
+            },
+            error: function(res){
+                console.log('error -- ', res);
+            }
+        })
+    }
+
+    function show(id){
+        console.log('show -- ', id);
+        $('#id').val(-1);
+        $('#code').val('');
+        $('#description').val('');
+        $('#status0').attr('checked', false);
+        $('#status1').attr('checked', false);
+        if(id != -1){
+            var data = systems[id];
+            $('#id').val(data.id);
+            $('#code').val(data.code);
+            $('#description').val(data.description);
+            if(data.status == 0){
+                $('#status0').attr('checked', true);
+            }else {
+                $('#status1').attr('checked', true);
+            }
+        }
+        $('#myModal').modal('show');
+    }
+
+    function addOrUpdate(){
+        console.log('add or update');
+        var data = {}
+        data.id = $('#id').val();
+        data.code = $('#code').val();
+        data.description = $('#description').val();
+        data.status = 1;
+        if($('#status0')[0].checked == true)    data.status = 0;
+        console.log('id = ', data.id, ', code = ', data.code, ', description = ', data.description, ', status = ', data.status);
+        if(data.id == -1){
+            var jsonStr = JSON.stringify(data);
+            $.ajax({
+                url: '/api/systems',
+                method: 'POST',
+                dataType: 'json',
+                data: jsonStr,
+                contentType: 'application/json',
+                success: function(res){
+                    console.log('add res - ', res);
+                    findAll();
+                },
+                error: function(res){
+                    console.log('add error - ', res);
+                }
+            });
+        }else {
+            var jsonStr = JSON.stringify(data);
+            $.ajax({
+                url: '/api/systems/' + data.id,
+                method: 'PUT',
+                dataType: 'json',
+                data: jsonStr,
+                contentType: 'application/json',
+                success: function(res){
+                    console.log('add res - ', res);
+                    findAll();
+                },
+                error: function(res){
+                    console.log('add error - ', res);
+                }
+            });
+        }
+        $('#myModal').modal('hide');
+    }
+
+    function deleted(id) {
+        console.log("delete -- ", id);
+        if (id != -1) {
+            $.ajax({
+                url: '/api/systems/' + id,
+                method: 'DELETE',
+                dataType: 'json',
+                success: function (res) {
+                    console.log('add res - ', res);
+                    findAll();
+                },
+                error: function (res) {
+                    console.log('add error - ', res);
+                }
+            });
+        }
+    }
+</script>
+</html>
